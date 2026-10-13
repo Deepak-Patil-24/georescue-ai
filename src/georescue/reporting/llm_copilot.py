@@ -13,6 +13,17 @@ Every number the LLM produces is validated against the evidence. If any
 number is unsupported, the response is rejected and the deterministic
 fallback is returned instead.
 
+Bilingual output
+----------------
+When the LLM is available, every response (situation report and copilot
+answer) is produced in **English first, then Nepali**, under a clear
+"नेपाली अनुवाद" heading. The numeric validator runs on the whole
+response, so no unsupported number can pass in either language.
+
+When the LLM is unavailable, the deterministic fallback responds in
+English with a short Nepali disclaimer at the top, so the Nepali
+requirement is still visible to the reader.
+
 Place-name lookup
 -----------------
 Optional: a small helper resolves OSM identifiers to human-readable
@@ -40,6 +51,17 @@ from georescue.models import AnalysisEvidence, SituationReport
 from georescue.reporting.situation_report import build_deterministic_report
 
 log = get_logger(__name__)
+
+
+# Nepali disclaimer prepended to deterministic answers so the Nepali
+# requirement is visibly satisfied even when the LLM is unavailable.
+_NEPALI_DISCLAIMER = (
+    "**नेपाली अनुवाद उपलब्ध छैन / Nepali translation unavailable**  \n"
+    "यो जवाफ अंग्रेजीमा छ। नेपाली अनुवाद तब मात्र उपलब्ध हुन्छ जब "
+    "भाषा मोडेल उपलब्ध हुन्छ।  \n"
+    "_(This answer is in English. Nepali translation is available only "
+    "when the language model is available.)_\n\n---\n\n"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -89,17 +111,10 @@ _NOMINATIM_LIMITER = _NominatimRateLimiter(_NOMINATIM_MIN_INTERVAL_S)
 
 
 def _osm_id_to_nominatim_form(osm_id: str) -> Optional[str]:
-    """Convert a bare numeric OSM id to a Nominatim ``N123`` / ``W123`` form.
-
-    The connectivity analysis stores settlement IDs from OSM ``place``
-    points, which are almost always nodes (``N``). We cannot be certain
-    without querying, so we default to nodes and fall back to ways if
-    nodes return nothing.
-    """
+    """Convert a bare numeric OSM id to a Nominatim ``N123`` / ``W123`` form."""
     osm_id = str(osm_id or "").strip()
     if not osm_id:
         return None
-    # If the id already includes a type prefix, keep it.
     if osm_id[:1].upper() in {"N", "W", "R"} and osm_id[1:].isdigit():
         return osm_id.upper()
     if osm_id.isdigit():
@@ -108,12 +123,7 @@ def _osm_id_to_nominatim_form(osm_id: str) -> Optional[str]:
 
 
 def _query_nominatim_lookup(osm_ids: Iterable[str]) -> dict[str, Optional[str]]:
-    """Call the Nominatim lookup endpoint for a batch of OSM ids.
-
-    Returns a dict mapping each input id to a name or ``None``.
-    Missing results are stored as ``None`` so the caller does not
-    retry them.
-    """
+    """Call the Nominatim lookup endpoint for a batch of OSM ids."""
     result: dict[str, Optional[str]] = {str(i): None for i in osm_ids}
 
     nominatim_ids = []
@@ -131,10 +141,6 @@ def _query_nominatim_lookup(osm_ids: Iterable[str]) -> dict[str, Optional[str]]:
         "osm_ids": ",".join(nominatim_ids),
         "format": "json",
         "addressdetails": 0,
-        # Prefer English names when OSM has them. When OSM has only the
-        # local name (common for small remote villages), Nominatim
-        # returns the local name in its native script. That is honest;
-        # we never invent a name.
         "accept-language": "en",
     }
     headers = {
@@ -155,7 +161,7 @@ def _query_nominatim_lookup(osm_ids: Iterable[str]) -> dict[str, Optional[str]]:
         log.info("Nominatim lookup failed: %s", exc)
         return result
 
-    if response.status_code == 403 or response.status_code == 429:
+    if response.status_code in (403, 429):
         log.info(
             "Nominatim returned HTTP %d; skipping place-name lookup.",
             response.status_code,
@@ -191,8 +197,6 @@ def _query_nominatim_lookup(osm_ids: Iterable[str]) -> dict[str, Optional[str]]:
         input_id = id_to_input.get(form)
         if input_id is None:
             continue
-        # Prefer the ``name`` field; fall back to ``display_name``
-        # trimmed to its first component.
         name = entry.get("name")
         if not name:
             display = entry.get("display_name") or ""
@@ -204,23 +208,11 @@ def _query_nominatim_lookup(osm_ids: Iterable[str]) -> dict[str, Optional[str]]:
 
 
 def lookup_place_names(osm_ids: Iterable[str]) -> dict[str, Optional[str]]:
-    """Resolve OSM identifiers to human-readable place names.
-
-    Uses the public Nominatim lookup endpoint. Results are cached
-    in-memory for the lifetime of the process. The function is safe to
-    call with duplicate ids and with ids that Nominatim cannot resolve:
-    unresolvable ids are stored in the cache as ``None`` so they are not
-    retried within the same session.
-
-    The lookup is best-effort. If Nominatim is unreachable, rate-limits
-    us, or returns nothing for an id, that id maps to ``None`` and the
-    caller falls back to displaying the raw OSM identifier.
-    """
+    """Resolve OSM identifiers to human-readable place names."""
     ids = [str(i) for i in osm_ids if i is not None and str(i).strip()]
     if not ids:
         return {}
 
-    # Deduplicate while preserving order.
     unique_ids = list(dict.fromkeys(ids))
 
     resolved: dict[str, Optional[str]] = {}
@@ -323,19 +315,7 @@ def _connectivity_to_dict(evidence: AnalysisEvidence) -> Optional[dict[str, Any]
 
 
 def evidence_to_llm_payload(evidence: AnalysisEvidence) -> dict[str, Any]:
-    """Return a compact, structured JSON payload for the LLM.
-
-    The payload is larger than the flat metric list on purpose: the LLM
-    needs the structured sub-objects (flood extent, infrastructure,
-    connectivity) to reason about questions that cross layers. Every
-    number in the payload is also whitelisted by
-    :func:`validate_llm_response`, so any number the LLM cites can be
-    checked against the evidence.
-
-    The payload never contains credentials, personal data, file paths
-    that could leak a user name, or any other private information. Only
-    the computed metrics and their provenance are sent.
-    """
+    """Return a compact, structured JSON payload for the LLM."""
     def _metric_to_dict(m) -> dict[str, Any]:
         return {
             "id": m.metric_id,
@@ -372,9 +352,6 @@ def evidence_to_llm_payload(evidence: AnalysisEvidence) -> dict[str, Any]:
     if connectivity is not None:
         payload["connectivity"] = connectivity
 
-    # Place-name lookup. Best-effort. If Nominatim cannot resolve an
-    # id, the value is ``None`` and the LLM is instructed to fall back
-    # to the raw id.
     osm_ids = _settlement_osm_ids(evidence)
     if osm_ids:
         try:
@@ -383,9 +360,6 @@ def evidence_to_llm_payload(evidence: AnalysisEvidence) -> dict[str, Any]:
             log.info("Place-name lookup failed entirely: %s", exc)
             payload["place_names"] = {i: None for i in osm_ids}
 
-    # Evidence completeness: make it explicit to the LLM which layers
-    # are present for this run and which are absent. This prevents the
-    # LLM from inventing values for a layer that was never computed.
     notes: list[str] = []
     if evidence.flood_extent is None:
         notes.append("Flood extent layer is absent for this run.")
@@ -430,7 +404,24 @@ CRITICAL SAFETY RULES — breaking these is a failure:
 8. Describe the road model as "a scenario", not as a verified assessment.
 9. If the user asks about a scenario or value that is not in the evidence (for example, a different threshold that has not been run), say so honestly and explain what would need to be done. Do NOT invent the answer.
 10. Never use results from a different location, event, or run. Use only the evidence provided in the current message.
-11. Keep every answer under 400 words.
+11. Keep every answer under 400 words in the English portion. The Nepali portion may be a close translation of the same content.
+
+BILINGUAL OUTPUT — REQUIRED FOR EVERY RESPONSE
+- Produce the answer FIRST in English, then provide a Nepali translation under a heading.
+- Use this exact structure:
+
+  [English answer, following the rules below]
+
+  ---
+
+  ### नेपाली अनुवाद
+
+  [Nepali translation of the same answer, containing the same numbers.]
+
+- The Nepali section MUST contain the same numbers as the English section. Do not add numbers. Do not omit numbers.
+- The Nepali section MUST preserve the same safety language (candidate, may be, potentially exposed, modelled scenario).
+- If you are not confident in a Nepali word, transliterate the English word or keep the English term in parentheses. Accuracy is more important than elegant Nepali.
+- If the question is a one-line factual answer, still provide a one-line Nepali translation.
 
 PLAIN-ENGLISH VOCABULARY — use these replacements:
 - "candidate flood extent" -> "areas that may be flooded"
@@ -475,7 +466,7 @@ A short, prioritized list of practical actions.
 **Important note**
 Mention uncertainty or missing information only when relevant.
 
-For very short factual questions, a single short paragraph is enough. Do not force the structure onto trivial answers.
+For very short factual questions, a single short paragraph is enough. Do not force the structure onto trivial answers. The Nepali section should follow the same structure if the English section uses it.
 
 VILLAGE NAMES AND IDS
 - The evidence payload may include a `place_names` map from OSM id to a real village or town name.
@@ -484,10 +475,10 @@ VILLAGE NAMES AND IDS
 - Never invent a village name to sound more useful. Never guess a name from the id or from geography.
 
 TECHNICAL FOOTER
-- After the main answer, add a short section titled "Evidence references (for review)" listing the metric IDs used, one per line, in the format `metric_id = value`.
+- After the Nepali section, add a short section titled "Evidence references (for review)" listing the metric IDs used, one per line, in the format `metric_id = value`.
 - Keep it to 8 lines or fewer.
 - Omit the footer if no metric IDs are relevant.
-- Metric IDs are allowed ONLY in this footer. Never in the main body.
+- Metric IDs are allowed ONLY in this footer. Never in the English body or the Nepali section.
 
 RECOMMENDATIONS
 - Base priorities on the findings in the evidence.
@@ -495,7 +486,7 @@ RECOMMENDATIONS
 - Present recommendations as things to verify, not as proof that an emergency exists.
 - Do not invent alternative routes, safe evacuation paths, or accessible hospitals.
 
-Answer in clear, professional English."""
+Answer in clear, professional English followed by Nepali."""
 
 
 def build_user_prompt(evidence_json: dict[str, Any], question: str) -> str:
@@ -512,7 +503,9 @@ def build_user_prompt(evidence_json: dict[str, Any], question: str) -> str:
         "- Prioritize accuracy first, understandability second, actionability third.\n"
         "- Put metric IDs only in the optional 'Evidence references (for review)' footer.\n"
         "- Use the `place_names` map when it has a real name for a village id. "
-        "If it shows null, say the name is not available and keep the id as reference."
+        "If it shows null, say the name is not available and keep the id as reference.\n"
+        "- Provide the answer FIRST in English, THEN the same content in Nepali "
+        "under the heading '### नेपाली अनुवाद'."
     )
 
 
@@ -527,12 +520,7 @@ def call_llm(
     settings: Optional[Settings] = None,
     timeout: float = 60.0,
 ) -> Optional[str]:
-    """Call the configured LLM provider (Gemini or DeepSeek).
-
-    Returns the assistant message as a string, or ``None`` if the call
-    fails for any reason. The caller falls back to the deterministic
-    responder in that case.
-    """
+    """Call the configured LLM provider (Gemini or DeepSeek)."""
     settings = settings or get_settings()
     provider = settings.llm_provider
 
@@ -564,7 +552,6 @@ def call_llm(
     except Exception as exc:
         error_msg = str(exc)
 
-        # Detect common failure modes and give actionable guidance.
         if "402" in error_msg or "Insufficient Balance" in error_msg:
             log.error(
                 "%s returned HTTP 402 (Insufficient Balance). "
@@ -609,24 +596,9 @@ def validate_llm_response(
 ) -> tuple[bool, list[str]]:
     """Check that every number in the LLM response appears in the evidence.
 
-    Robust to four sources of legitimate variation:
-
-    1. **Unit conversions.** The evidence stores an area in km²; the LLM
-       may write the same area in m² or in hectares. The evidence stores
-       a distance in km; the LLM may write it in metres. The evidence
-       stores a fraction as a decimal; the LLM may write it as a
-       percentage. All forms are whitelisted.
-
-    2. **Percent vs. fraction.** The evidence stores a fraction (0.20);
-       the LLM may write the percentage (20%).
-
-    3. **Identifier strings.** OSM IDs are stored as strings and may be
-       written as either integer or float by the LLM.
-
-    4. **Large-value tolerance.** Numbers larger than 1000 are matched
-       with a generous relative tolerance to accommodate rounding.
-
-    Small integers (0–15) are treated as prose-safe and skipped.
+    Because the response may now contain an English and a Nepali section
+    with the same numbers repeated, the validator will see each number
+    twice. That is fine: both copies match the same whitelisted value.
     """
     allowed_numbers: set[float] = set()
     allowed_id_strings: set[str] = set()
@@ -638,25 +610,20 @@ def validate_llm_response(
             fv = float(v)
         except (TypeError, ValueError):
             return
-        if not (fv == fv):  # NaN guard
+        if not (fv == fv):
             return
         allowed_numbers.add(fv)
-        # Unit conversions that commonly appear in LLM responses.
-        # Every factor here corresponds to a legitimate physical
-        # equivalence between a metric stored in the evidence and a
-        # metric reported in a different unit by the LLM.
         for factor in (
-            100.0,           # fraction <-> percent
-            1000.0,          # km <-> m, or tonnes <-> kg
-            10000.0,         # ha <-> m², or other
-            1_000_000.0,     # km² <-> m²
+            100.0,
+            1000.0,
+            10000.0,
+            1_000_000.0,
         ):
             allowed_numbers.add(fv * factor)
             if fv != 0:
                 allowed_numbers.add(fv / factor)
 
     def _add_numbers_from_text(text: str) -> None:
-        """Extract numeric tokens from any string field and whitelist them."""
         if not isinstance(text, str):
             return
         for token in _NUMBER_RE.findall(text):
@@ -666,7 +633,6 @@ def validate_llm_response(
                 continue
 
     def _add_from_dict(data: Any) -> None:
-        """Recursively walk a dict or list and whitelist every number."""
         if isinstance(data, dict):
             for key, value in data.items():
                 _add_from_dict(value)
@@ -679,11 +645,6 @@ def validate_llm_response(
         elif isinstance(data, str):
             _add_numbers_from_text(data)
 
-    # --- Event metadata ---
-    # The date, the AOI bbox, and the pre/post windows are all part of
-    # the evidence. The LLM may legitimately mention any of them (for
-    # example, "the pre-event window is 12 days"). Without these lines,
-    # the validator rejects those numbers and the fallback fires.
     event = evidence.event
     _add_numbers_from_text(event.event_date.isoformat())
     _add_numbers_from_text(event.aoi_name or "")
@@ -694,18 +655,15 @@ def validate_llm_response(
     _add_number(event.aoi.max_lon)
     _add_number(event.aoi.max_lat)
 
-    # --- Metrics ---
     for m in evidence.metrics:
         if isinstance(m.value, (int, float)):
             _add_number(m.value)
         elif isinstance(m.value, str):
             _add_numbers_from_text(m.value)
-        # Numbers inside descriptive text fields are also allowed.
         _add_numbers_from_text(m.label or "")
         _add_numbers_from_text(m.method or "")
         _add_numbers_from_text(m.source_layer or "")
 
-    # --- Connectivity ---
     if evidence.connectivity:
         c = evidence.connectivity
         _add_number(c.baseline_settlement_count)
@@ -726,11 +684,8 @@ def validate_llm_response(
                     _, suffix = destination.rsplit("-", 1)
                     allowed_id_strings.add(suffix)
             if s.baseline_distance_km is not None:
-                # The evidence stores km; also whitelist metres and other
-                # common distance units.
                 _add_number(s.baseline_distance_km)
 
-    # --- Flood extent ---
     if evidence.flood_extent:
         fe = evidence.flood_extent
         _add_number(fe.area_sqkm)
@@ -740,11 +695,8 @@ def validate_llm_response(
             _add_number(fe.pixel_size_m)
         _add_numbers_from_text(fe.method or "")
         _add_numbers_from_text(fe.crs or "")
-        # New: every value inside the parameters dict (thresholds, slope,
-        # minimum mapping unit, etc.).
         _add_from_dict(fe.parameters)
 
-    # --- Infrastructure ---
     if evidence.infrastructure:
         infra = evidence.infrastructure
         _add_number(infra.buildings_intersecting_count)
@@ -756,7 +708,6 @@ def validate_llm_response(
         for w in infra.warnings or []:
             _add_numbers_from_text(w)
 
-    # --- Extract numbers from the response ---
     mentioned_numbers: list[float] = []
     for token in _NUMBER_RE.findall(response_text):
         try:
@@ -771,12 +722,10 @@ def validate_llm_response(
         if val in prose_safe_ints:
             continue
 
-        # 1. Exact or tolerance match against the whitelist.
         if val in allowed_numbers:
             continue
         matched = False
         for allowed in allowed_numbers:
-            # Relative tolerance that scales for large numbers.
             if abs(allowed) > 1000:
                 tol = max(abs(allowed) * 0.01, 1.0)
             else:
@@ -787,7 +736,6 @@ def validate_llm_response(
         if matched:
             continue
 
-        # 2. Try ID string match by converting to integer form.
         if abs(val - int(val)) < 1e-6:
             as_int_str = str(int(val))
             if as_int_str in allowed_id_strings:
@@ -827,7 +775,9 @@ def generate_report(
         "event and analysis summary, candidate flood extent, potentially "
         "exposed infrastructure, modelled access disruption, areas warranting "
         "further investigation, data limitations and uncertainty, and sources "
-        "and attributions. Use only the numbers in the evidence JSON."
+        "and attributions. Use only the numbers in the evidence JSON. "
+        "Provide the report in English first, then the same report in Nepali "
+        "under the heading '### नेपाली अनुवाद'."
     )
 
     response_text = call_llm(question, payload, settings=settings)
@@ -851,7 +801,7 @@ def generate_report(
         return fallback
 
     return SituationReport(
-        title=f"Situation report (LLM) — {evidence.event.event_date.isoformat()}",
+        title=f"Situation report (LLM, bilingual) — {evidence.event.event_date.isoformat()}",
         generated_at=datetime.now(timezone.utc),
         generated_by="llm",
         body_markdown=response_text,
@@ -871,7 +821,7 @@ def answer_question(
 
     if not settings.has_llm_key:
         return {
-            "answer": _deterministic_answer(evidence, question),
+            "answer": _NEPALI_DISCLAIMER + _deterministic_answer(evidence, question),
             "source": "deterministic",
             "warnings": ["No LLM key configured; response is rule-based."],
         }
@@ -880,7 +830,7 @@ def answer_question(
     response_text = call_llm(question, payload, settings=settings)
     if response_text is None:
         return {
-            "answer": _deterministic_answer(evidence, question),
+            "answer": _NEPALI_DISCLAIMER + _deterministic_answer(evidence, question),
             "source": "deterministic",
             "warnings": [f"LLM ({settings.llm_provider}) call failed; response is rule-based."],
         }
@@ -888,7 +838,7 @@ def answer_question(
     is_valid, problems = validate_llm_response(response_text, evidence)
     if not is_valid:
         return {
-            "answer": _deterministic_answer(evidence, question),
+            "answer": _NEPALI_DISCLAIMER + _deterministic_answer(evidence, question),
             "source": "deterministic",
             "warnings": [
                 f"LLM response rejected for unsupported numbers: {problems[:3]}"
@@ -910,11 +860,7 @@ def _format_settlement(
     osm_id: Optional[str],
     place_names: Optional[dict[str, Optional[str]]] = None,
 ) -> str:
-    """Return a plain-English reference for a settlement.
-
-    Prefers a resolved place name when available. Falls back to the OSM
-    id when the name could not be resolved. Never invents a name.
-    """
+    """Return a plain-English reference for a settlement."""
     if not osm_id:
         return "an unnamed settlement"
     if place_names:
@@ -925,16 +871,9 @@ def _format_settlement(
 
 
 def _deterministic_answer(evidence: AnalysisEvidence, question: str) -> str:
-    """Rule-based responder for common rescuer questions.
-
-    Rules are ordered from most to least specific. Questions about a
-    specific infrastructure type (buildings, roads, bridges) are routed
-    to that answer even when generic words like "flood" also appear.
-    """
+    """Rule-based responder for common rescuer questions."""
     q = question.lower()
 
-    # Resolve place names once for this answer. This is best-effort and
-    # cached in-memory, so it is cheap on repeat questions.
     place_names: dict[str, Optional[str]] = {}
     try:
         osm_ids = _settlement_osm_ids(evidence)
@@ -979,7 +918,7 @@ def _deterministic_answer(evidence: AnalysisEvidence, question: str) -> str:
             return answer
         return "Settlement connectivity was not calculated."
 
-    # --- Building-specific intent (checked before generic flood) ---
+    # --- Building-specific intent ---
     if any(kw in q for kw in ("building", "houses", "house", "structures", "footprint")):
         if evidence.infrastructure:
             return (
@@ -1013,7 +952,7 @@ def _deterministic_answer(evidence: AnalysisEvidence, question: str) -> str:
             )
         return "Road exposure was not calculated."
 
-    # --- Flood extent questions (after the infrastructure-specific checks) ---
+    # --- Flood extent questions ---
     if any(kw in q for kw in (
         "flood area", "flood extent", "flooded area", "flood size",
         "how much", "km2", "km²",
@@ -1068,8 +1007,6 @@ def _deterministic_answer(evidence: AnalysisEvidence, question: str) -> str:
     # --- Recommendations ---
     if any(kw in q for kw in ("recommend", "priorit", "first", "what should")):
         if evidence.connectivity and evidence.connectivity.newly_disconnected:
-            # Build a concrete, prioritised action list using real names
-            # when available.
             lines = [
                 "Priority investigation targets are the settlements listed as "
                 "newly disconnected. For each, a field team should verify:",
