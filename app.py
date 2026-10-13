@@ -28,6 +28,15 @@ Run with:
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Make the georescue package importable when the app runs from the
+# repository root on Streamlit Cloud. Locally, PYTHONPATH=src handles
+# this; on the cloud, there is no environment variable, so we add
+# src/ to sys.path explicitly.
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+
 import json
 import queue
 import threading
