@@ -1,0 +1,9 @@
+{
+"type": "FeatureCollection",
+"name": "disconnected_settlements",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "osm_id": "2313807996", "osm_type": "node", "tags": { "name": "थाइकोट", "place": "hamlet", "name:en": "Thaikot", "name:fa": "تایی‌کوت", "name:ne": "थाइकोट", "name:ur": "تھائی کوٹ" }, "baseline_distance_m": 2030.5210767516078 }, "geometry": { "type": "Point", "coordinates": [ 85.364275, 27.6528026 ] } },
+{ "type": "Feature", "properties": { "osm_id": "8187696685", "osm_type": "node", "tags": { "name": "चङ्गाथली", "place": "hamlet", "name:en": "Changathali", "name:fa": "چنگاتالی", "name:ne": "चङ्गाथली", "name:ur": "چنگاتھلی" }, "baseline_distance_m": 1111.6369155264601 }, "geometry": { "type": "Point", "coordinates": [ 85.3682629, 27.6543547 ] } }
+]
+}

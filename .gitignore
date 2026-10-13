@@ -1,0 +1,77 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Environment / secrets ---
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# --- IDE ---
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- GeoRescue AI data and outputs (never commit downloaded satellite data) ---
+data/raw/*
+data/interim/*
+data/processed/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+
+outputs/*
+!outputs/.gitkeep
+
+reports/*
+!reports/.gitkeep
+
+# --- Large satellite / raster file extensions (safety net) ---
+*.tif
+*.tiff
+*.jp2
+*.safe
+*.SAFE
+*.zip
+*.nc
+*.hdf
+*.h5
+*.img
+*.vrt
+
+# --- Streamlit / OS ---
+.streamlit/secrets.toml
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Deployment data (small output files only, no satellite zips) ---
+!deploy_files/
+!deploy_files/**
+
+# --- Backup files (never commit) ---
+*.bak

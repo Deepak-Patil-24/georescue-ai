@@ -1,0 +1,38 @@
+{
+  "aoi_bbox": [
+    85.1,
+    27.6,
+    85.55,
+    28.05
+  ],
+  "osm_snapshot": "2026-07-27",
+  "event_date": "2026-08-26",
+  "disruption_fraction": 0.2,
+  "node_merge_m": 50.0,
+  "graph": {
+    "nodes": 25147,
+    "edges": 24572
+  },
+  "counts": {
+    "settlements_in_graph": 249,
+    "destinations_in_graph": 522,
+    "baseline_connected": 87,
+    "scenario_connected": 85,
+    "newly_disconnected": 2,
+    "disrupted_edges": 424
+  },
+  "newly_disconnected_settlements": [
+    {
+      "settlement_id": "2313807996",
+      "baseline_distance_m": 2030.5210767516078,
+      "baseline_destination": "hospital-10004438856"
+    },
+    {
+      "settlement_id": "8187696685",
+      "baseline_distance_m": 1111.6369155264601,
+      "baseline_destination": "town-7867791081"
+    }
+  ],
+  "warnings": [],
+  "note": "Modelled access disruption scenario. Not a verified accessibility assessment. Potentially impassable roads are those intersecting the flood extent over at least 20% of their length."
+}

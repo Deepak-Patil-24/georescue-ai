@@ -1,0 +1,577 @@
+# GeoRescue AI — Three-Minute Demo Script
+
+**Multimodal AI Hackathon 2026 — Track B: Mapping Flood Damage from Space**
+
+Total duration: 3 minutes (180 seconds). Timings are approximate; a
+small buffer is built in.
+
+Before you start:
+
+- Dashboard is running: `streamlit run app.py`.
+- Browser is open to `http://localhost:8501`.
+- Terminal window is visible on a second screen or beside the browser.
+- Do not read from a script; this is a guide, not a teleprompter.
+- Speak clearly. Pause briefly between sections.
+
+---
+
+## Scene 1 — User inputs (0:00 – 0:20)
+
+**Show:** the sidebar with the AOI inputs and the event date.
+
+**Say:**
+
+> "This is GeoRescue AI, a system that answers three questions from
+> satellite data for any area and date. On the left, the user picks
+> the area of interest and the event date. The defaults are the
+> Trishuli corridor in Nepal for the August 2026 flood, but every
+> input here is user-supplied. Nothing is hardcoded."
+
+**Do:** click the event date and hover over one of the AOI fields.
+
+---
+
+## Scene 2 — Satellite acquisition (0:20 – 0:50)
+
+**Show:** the terminal with the pipeline logs.
+
+**Say:**
+
+> "The pipeline starts by searching the Copernicus Data Space
+> Ecosystem for Sentinel-1 radar scenes that cover this area before
+> and after the event. Radar is chosen because it sees through
+> monsoon clouds. The system selects a compatible pre/post pair —
+> same relative orbit, same direction, roughly twelve days apart —
+> so the images can be compared pixel by pixel."
+
+**Do:** point to the two product names in the log.
+
+> "For Trishuli, the pair is 16 August and 28 August 2026,
+> both ASCENDING. For the Syapru Besi extension used for evaluation,
+> we downloaded the adjacent slices ending at 12:22:06 UTC on the
+> same dates."
+
+---
+
+## Scene 3 — Flood mapping (0:50 – 1:20)
+
+**Show:** the Flood mapping section in the dashboard. Click Generate
+map or scroll to the map.
+
+**Say:**
+
+> "After terrain correction, we compute the ratio of post-event to
+> pre-event backscatter. Water scatters radar energy away from the
+> sensor, so a strong drop in backscatter is the signature of
+> flooding. We apply a slope mask, a minimum mapping unit, and a
+> median speckle filter. The result is a candidate flood extent —
+> the words 'candidate' and 'extent' matter, because this is not a
+> confirmed damage map."
+
+**Do:** point to the blue polygons on the map.
+
+> "For Trishuli, the system maps 3.05 square kilometres across 181
+> polygons. For the Syapru Besi AOI we ran later for evaluation,
+> 0.28 square kilometres across 32 merged polygons."
+
+---
+
+## Scene 4 — Infrastructure exposure (1:20 – 1:45)
+
+**Show:** the Infrastructure exposure section.
+
+**Say:**
+
+> "The flood extent is then intersected with pre-event OpenStreetMap
+> buildings, roads, and bridges. OSM data is a historical snapshot
+> dated 27 July 2026, before the event — not current OSM."
+
+**Do:** point to the four KPI cards.
+
+> "For the Trishuli corridor: 514 buildings intersect the candidate
+> extent, with an exposed footprint of 3.86 hectares. 1,256 road
+> segments intersect, totaling 64 kilometres. 11 bridges intersect."
+
+**Pause, then say:**
+
+> "These are potentially exposed features. They are not confirmed
+> damaged. A building whose footprint touches a flood polygon may or
+> may not have sustained damage. The system is explicit about that
+> distinction."
+
+---
+
+## Scene 5 — Settlement connectivity (1:45 – 2:10)
+
+**Show:** the Access disruption section.
+
+**Say:**
+
+> "This is the part rescuers care about most. We build a road-network
+> graph from the pre-event OpenStreetMap data using NetworkX. Nodes
+> are intersections and dead-ends; edges are road segments. Then we
+> compute baseline connectivity: which settlements can reach a
+> hospital or a town."
+
+**Do:** point to the four KPI cards.
+
+> "249 settlements in the graph. 87 were connected to a destination
+> at baseline. 85 remain connected after we remove road segments
+> whose flooded length exceeds 20% of their segment length."
+
+**Show:** the two OSM IDs below.
+
+> "Two settlements lose their connection. OSM IDs 2313807996 and 8187696685. These are the settlements a rescue team should
+> investigate first."
+
+**Pause, then say:**
+
+> "This is a modelled scenario. A flooded road is not automatically
+> impassable in reality. The system labels the output as
+> potentially cut off, not confirmed cut off."
+
+---
+
+## Scene 6 — AI situation report (2:10 – 2:40)
+
+**Show:** the Situation report section. Click Generate report.
+
+**Say:**
+
+> "Finally, the situation-report copilot. Every number in this report
+> is computed by Python and stored in a structured evidence object.
+> The language model is given that evidence and is instructed never
+> to invent a number. Every number it produces is validated against
+> the evidence. If it writes anything unsupported, the response is
+> rejected and we fall back to a deterministic report."
+
+**Do:** point to the source label.
+
+> "This report was generated by — see the source field — either the
+> LLM or the deterministic fallback. Both paths produce the same
+> numbers and the same structure. The difference is style."
+
+**Show:** the Copilot tab. Click one suggested question.
+
+> "Rescuers can also ask free-form questions. The copilot answers
+> from the same evidence."
+
+---
+
+## Scene 7 — Data provenance and limitations (2:40 – 3:00)
+
+**Show:** the Data provenance and limitations section.
+
+**Say:**
+
+> "Every result traces to a source file and a processing step. The
+> system lists all twelve metrics with their source layer and method,
+> plus the required attributions — Copernicus Sentinel data,
+> Copernicus WorldDEM-30, and OpenStreetMap contributors."
+
+**Do:** scroll to the attribution block.
+
+> "We have also evaluated the Syapru Besi flood extent against the
+> official Copernicus EMSR927 reference for AOI01. The IoU is 0.007
+> against the mass-movement footprint and 0.009 against buffered
+> damaged buildings. Those numbers are low because the two layers
+> represent different phenomena — a flood extent and a landslide
+> footprint. We report them honestly. We did not tune the algorithm
+> against the reference, because that would violate the competition
+> rules."
+
+**Close:**
+
+> "GeoRescue AI is a research prototype for the hackathon. It is
+> not an operational emergency-response system. Thank you."
+
+---
+
+## Short version (if time is tight)
+
+If the demo slot is shorter than three minutes, collapse scenes 3, 4,
+and 5 into a single walkthrough of the Map, then jump straight to
+scene 6. The Map already shows all the layers; a single sentence about
+each KPI card is enough.
+
+## Q&A talking points
+
+Anticipated questions and short answers:
+
+**"Why is the IoU so low?"**
+
+> Because the reference is a landslide-damage map and our candidate
+> is a flood-water extent. They are different phenomena. We report
+> the honest comparison and explain why the numbers are low.
+
+**"Did you train a model?"**
+
+> No. We implement a transparent threshold-based baseline, not a
+> trained model. We did not use Kuro Siwo or Sen1Floods11 because we
+> did not have time to train and validate a model in the hackathon
+> window. Using them would be a next step.
+
+**"What if the LLM hallucinates a number?"**
+
+> Our validator extracts every number from the response and checks
+> it against the evidence object. If any number is unsupported, we
+> reject the response and fall back to a deterministic answer.
+
+**"Is this hardcoded to the Trishuli flood?"**
+
+> No. The pipeline accepts any AOI and any event date. We
+> demonstrated this by re-running the entire pipeline for the Syapru
+> Besi AOI, which is a different location and uses different
+> Sentinel-1 slices.
+
+**"What happens if Sentinel-1 doesn't cover an area?"**
+
+> The system reports that no suitable scene was found and stops.
+> It does not fabricate data.
+
+**"What are the limitations?"**
+
+> Sentinel-1 revisit is 6–12 days; sudden events cannot be warned
+> about in advance. The detector is threshold-based, not trained. OSM
+> coverage in remote areas is incomplete. The system is a prototype,
+> not an operational tool.
+
+**"Why do some tiles fail to download from OSM?"**
+
+> The ohsome API has rate limits. Our tiled fetch uses exponential
+> backoff and continues with the tiles that succeed. The summary
+> reports how many tiles were successfully queried.
+
+**"How did you pick the thresholds?"**
+
+> The Trishuli thresholds (ratio 0.4, slope 5°) came from the flood
+> literature and produced a physically plausible extent. The Syapru
+> Besi thresholds (ratio 0.5, slope 25°) were adjusted for the
+> steeper terrain and higher elevation of that AOI. Neither was
+> tuned against the EMSR927 reference.
+> Save this file. Then run:
+
+powershell
+Get-Item docs/demo*script.md | Select-Object Name, @{Name="KB";Expression={[math]::Round($*.Length/1KB,2)}}
+Expected: demo_script.md ~8
+
+Reply with "Step 3 done" and we move to Step 4 (the README).
+
+ste 3 done
+Step 3 Complete
+docs/demo_script.md is saved with the three-minute timed script and Q&A talking points.
+
+Step 4 — Create README.md
+Action: Replace the entire contents of README.md with this. This is the complete project README that a judge would read to install and run the project.
+
+markdown
+
+# GeoRescue AI
+
+**Flood damage mapping and rescue intelligence from satellite data.**
+
+Submission for the **Multimodal AI Hackathon 2026 — Track B: Mapping
+Flood Damage from Space**.
+
+> ⚠️ **Research prototype — not an operational emergency-response
+> system.**
+> GeoRescue AI is an educational and research tool. It does not replace
+> official emergency services, and its outputs must not be used as the
+> sole basis for life-safety decisions. See _Limitations_ below.
+
+---
+
+## What it does
+
+Given an area of interest (bounding box or drawn polygon) and an event
+date, GeoRescue AI answers three disaster-response questions:
+
+1. **Where did the flood hit?**
+   Compares pre-event and post-event **Sentinel-1** SAR observations to
+   map candidate flood extent. Uses **Sentinel-2** optical imagery for
+   corroboration when clouds permit.
+
+2. **What infrastructure may have been affected?**
+   Intersects the mapped flood extent with **pre-event OpenStreetMap**
+   buildings, roads, and bridges, and reports counts, lengths, and OSM
+   identifiers.
+
+3. **Who may be cut off?**
+   Builds a road-network graph from the same pre-event OSM snapshot and
+   identifies settlements whose road connection to the nearest town or
+   hospital is lost under a configurable flood-disruption scenario.
+
+An optional **situation-report copilot** (LLM-backed, with a
+deterministic fallback) drafts a one-page report and answers rescuer
+questions — grounded strictly on metrics computed in Python, never
+invented by the language model.
+
+---
+
+## Case-study results (Trishuli, 26 August 2026)
+
+| Metric                              | Value                           |
+| ----------------------------------- | ------------------------------- |
+| Candidate flood extent (raster)     | 2.75 km²                        |
+| Candidate flood extent (vectorised) | 3.05 km², 181 polygons          |
+| Buildings intersecting flood        | 514 (3.86 ha exposed footprint) |
+| Road segments intersecting flood    | 1,256 (64.01 km affected)       |
+| Bridges intersecting flood          | 11                              |
+| Settlements in road graph           | 249                             |
+| Baseline connected                  | 87                              |
+| Scenario connected                  | 85                              |
+| **Settlements newly disconnected**  | **2**                           |
+
+See `docs/technical_report.md` for the full case study and evaluation.
+
+---
+
+## Quick start (Windows 11, VS Code, Python 3.11)
+
+### Prerequisites
+
+- Windows 10 or 11
+- Python 3.11 (verify with `python --version`)
+- Git (optional but recommended)
+- ~10 GB free disk space (Sentinel-1 products are large)
+- Internet connection for data downloads
+
+### Step 1 — Get the code
+
+````powershell
+git clone <your-repo-url> GeoRescue-AI
+cd GeoRescue-AI
+If you do not use Git, download the project as a ZIP and extract it,
+then cd into the folder.
+
+Step 2 — Create and activate a virtual environment
+powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+If PowerShell blocks the activation script with an execution policy
+error, run this once:
+
+powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+Step 3 — Install dependencies
+powershell
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+All dependencies ship prebuilt Windows wheels. No GDAL compilation is
+required.
+
+Step 4 — Configure environment variables
+powershell
+Copy-Item .env.example .env
+Open .env in VS Code and fill in the following.
+
+Required for live satellite data:
+
+CDSE_CLIENT_ID and CDSE_CLIENT_SECRET
+Register free at https://dataspace.copernicus.eu. Under
+User settings → OAuth clients, create a new client with grant type
+Client Credentials. Copy the Client ID and Client Secret into
+.env.
+
+Required for historical OSM:
+
+OHSOME_API_KEY
+Register free at https://account.heigit.org. Copy the API key into
+.env.
+
+Optional for the LLM copilot:
+
+GEMINI_API_KEY (free tier)
+Register at https://aistudio.google.com. Copy the API key into
+.env. Without this key, the copilot runs in deterministic mode.
+
+Optional for LLM fallback:
+
+DEEPSEEK_API_KEY (paid)
+If both Gemini and DeepSeek are unset, the copilot is deterministic.
+
+Step 5 — Verify the environment
+powershell
+$env:PYTHONPATH = "src"
+python scripts/check_environment.py
+Expected: no errors, all required packages import successfully.
+
+Step 6 — Run the pipeline (case study)
+Download the two case-study Sentinel-1 scenes:
+
+powershell
+python scripts/download_case_study.py
+This downloads two ~1.2 GB products from CDSE into
+data/raw/sentinel1/. It takes 15–30 minutes.
+
+Then run the pipeline:
+
+powershell
+python scripts/run_pipeline.py
+This executes terrain correction, alignment, slope computation, and
+flood detection. It takes 1–3 minutes for the small Syapru Besi AOI and
+around 30 seconds for the Trishuli AOI (after the first run, all stages
+are cached).
+
+Step 7 — Launch the dashboard
+powershell
+streamlit run app.py
+Open http://localhost:8501 in your browser.
+
+Project structure
+text
+GeoRescue-AI/
+├── app.py                     # Streamlit dashboard entry point
+├── requirements.txt
+├── README.md
+├── .env.example
+├── config/
+│   └── settings.py            # User-facing defaults
+├── src/georescue/
+│   ├── config.py
+│   ├── logging_config.py
+│   ├── models.py              # Pydantic schemas
+│   ├── validation.py
+│   ├── data_access/           # CDSE, Sentinel-1/2, OSM, DEM clients
+│   ├── processing/            # SAR preprocessing, flood detection, vectorisation
+│   ├── analysis/              # Infrastructure exposure, connectivity, terrain
+│   ├── reporting/             # Evidence, situation report, LLM copilot
+│   ├── evaluation/            # Reference-map comparison
+├── tests/
+├── scripts/
+│   ├── check_environment.py
+│   ├── download_case_study.py
+│   ├── run_pipeline.py
+│   ├── inspect_emsr927.py
+│   └── inspect_flood_extent.py
+├── data/                      # Downloaded and intermediate (gitignored)
+├── outputs/                   # Analysis outputs (gitignored)
+├── reports/                   # Situation reports (gitignored)
+└── docs/                      # Technical report, demo script, attributions
+Running on a new AOI
+The pipeline works for any AOI and any event date. To run a fresh
+analysis:
+
+Edit the AOI and event date in scripts/run_pipeline.py (the
+configuration block at the top of the file).
+
+Edit the AOI in scripts/download_case_study.py to match.
+
+Run python scripts/download_case_study.py to download the
+scenes.
+
+Run python scripts/run_pipeline.py.
+
+Vectorise the mask:
+
+powershell
+python -c "from pathlib import Path; from georescue.processing.vectorization import vectorize_flood_mask, write_geojson, reproject_geojson_to_wgs84; g = vectorize_flood_mask(Path('data/processed/candidate_flood_mask.tif'), merge_gap_m=50.0); w = reproject_geojson_to_wgs84(g, g['properties']['crs']); write_geojson(w, Path('data/processed/candidate_flood_extent.geojson')); print('wrote candidate_flood_extent.geojson')"
+Run the infrastructure and connectivity analyses:
+
+powershell
+python -c "from datetime import date; from pathlib import Path; from georescue.models import BoundingBox; from georescue.analysis.infrastructure import analyze_infrastructure_exposure; b = BoundingBox(min_lon=..., min_lat=..., max_lon=..., max_lat=...); analyze_infrastructure_exposure(Path('data/processed/candidate_flood_extent.geojson'), b, osm_snapshot=date(2026, 7, 27), event_date=date(2026, 8, 26), buffer_m=0.0)"
+powershell
+python -c "from datetime import date; from pathlib import Path; from georescue.models import BoundingBox; from georescue.analysis.connectivity import analyze_connectivity; b = BoundingBox(min_lon=..., min_lat=..., max_lon=..., max_lat=...); analyze_connectivity(Path('data/processed/candidate_flood_extent.geojson'), b, osm_snapshot=date(2026, 7, 27), event_date=date(2026, 8, 26), disruption_fraction=0.20)"
+Restart the dashboard to see the new results.
+
+Note: data/raw/sentinel1/ may contain scenes from previous runs.
+The download_case_study.py script re-downloads only what is missing.
+
+Evaluation against a reference map
+To compare the candidate flood extent against a reference (for example
+the official Copernicus EMSR927 product), place the reference file at
+data/processed/reference.gpkg (or any path) and run:
+
+powershell
+python -c "from pathlib import Path; from georescue.models import BoundingBox; from georescue.evaluation.metrics import evaluate_flood_extent; b = BoundingBox(min_lon=..., min_lat=..., max_lon=..., max_lat=...); result = evaluate_flood_extent(Path('data/processed/candidate_flood_extent.geojson'), Path('data/processed/reference.gpkg'), aoi_bbox=b, reference_layer='<layer-name>', resolution_m=30.0); import json; print(json.dumps(result, indent=2))"
+Critical: the reference map is used only for evaluation. It must
+never be fed into the flood-detection or infrastructure pipeline. See
+the hackathon rules in the technical report.
+
+## Testing
+
+Run the automated test suite:
+
+```powershell
+$env:PYTHONPATH = "src"
+pytest tests/ -v
+
+Configuration
+All configuration is via .env (see .env.example). The most
+relevant settings:
+
+Variable	Default	Purpose
+CDSE_CLIENT_ID, CDSE_CLIENT_SECRET	—	Sentinel-1/2 download
+OHSOME_API_KEY	—	Historical OSM
+GEMINI_API_KEY	—	Optional LLM copilot
+GEORESCUE_COPILOT_MODE	auto	auto, deterministic, llm
+GEORESCUE_MAX_AOI_SQKM	5000	Maximum AOI size
+GEORESCUE_LOG_LEVEL	INFO	Logging
+Data sources and attributions
+GeoRescue AI uses only the data sources permitted by the hackathon
+rules:
+
+Sentinel-1 and Sentinel-2 from the
+Copernicus Data Space Ecosystem.
+
+Copernicus DEM 30 m (WorldDEM-30) from the AWS Open Data bucket.
+
+OpenStreetMap pre-event snapshot via the
+ohsome API.
+
+Copernicus EMSR927 and other published damage maps are NOT used as
+prediction inputs. They may be used only for evaluation, clearly
+separated from the analysis pipeline.
+
+Required attributions
+Contains modified Copernicus Sentinel data 2026.
+
+Produced using Copernicus WorldDEM-30 © DLR e.V. 2010–2014 and
+© Airbus Defence and Space GmbH 2014–2018 provided under COPERNICUS
+by the European Union and ESA; all rights reserved.
+
+© OpenStreetMap contributors.
+
+See docs/attributions.md for the complete list.
+
+Limitations (summary)
+Sentinel-1 revisit is roughly 6–12 days per orbit; sudden events
+such as the 26 August 2026 glacier collapse cannot be warned about
+in advance.
+
+The baseline flood detector uses backscatter change detection with a
+configurable threshold. It is not a trained deep-learning model.
+
+Detected change is candidate flood extent, not confirmed damage.
+
+Infrastructure intersecting the flood polygon is potentially
+exposed, not confirmed destroyed.
+
+Modelled road disconnection is a scenario, not proof a road is
+impassable.
+
+Cloud cover limits Sentinel-2 corroboration; SAR-only results are
+normal during monsoon conditions.
+
+OpenStreetMap coverage in remote Himalayan regions is incomplete.
+
+The Syapru Besi evaluation against EMSR927 returns low IoU (0.007
+and 0.009) because the two layers represent different phenomena: a
+flood extent and a landslide-damage footprint.
+
+See docs/technical_report.md, Section 8, for the full limitations.
+
+Licence
+Source code: MIT.
+OSM-derived outputs, if published, must remain under ODbL.
+Sentinel and Copernicus DEM data are distributed under the Copernicus
+free, full and open data policy.
+
+text
+
+**Save this file. Then run:**
+
+```powershell
+Get-Item README.md | Select-Object Name, @{Name="KB";Expression={[math]::Round($_.Length/1KB,2)}}
+Expected: README.md ~10
+````
