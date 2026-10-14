@@ -19,7 +19,7 @@ Flood Damage from Space**.
 | Resource                 | Link                                                         |
 | ------------------------ | ------------------------------------------------------------ |
 | **Live dashboard**       | https://georescue-ai-georescue.streamlit.app                 |
-| **Demo video**           | _to be added before submission_                              |
+| **Demo video**           | https://youtu.be/1xIeccUQCPc                              |
 | **Technical report**     | [docs/technical_report.md](docs/technical_report.md)         |
 | **Attributions**         | [docs/attributions.md](docs/attributions.md)                 |
 | **Acceptance checklist** | [docs/acceptance_checklist.md](docs/acceptance_checklist.md) |
