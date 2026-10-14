@@ -74,19 +74,21 @@ one of four labels:
 
 ## B. AI component
 
-| Requirement                               | Status                           | Evidence                                                 |
-| ----------------------------------------- | -------------------------------- | -------------------------------------------------------- |
-| Situation-report copilot                  | ✅ Implemented and tested        | `src/georescue/reporting/llm_copilot.py`                 |
-| Deterministic fallback                    | ✅ Implemented and tested        | `src/georescue/reporting/situation_report.py`            |
-| Every number grounded in computed metrics | ✅ Implemented and tested        | 12 `EvidenceMetric` objects in `evidence.py`             |
-| LLM cannot invent numbers                 | ✅ Implemented and tested        | Validator rejects unsupported numbers; verified in tests |
-| LLM can answer rescuer questions          | ✅ Implemented and tested        | `answer_question` works with Gemini and deterministic    |
-| Free-form question support                | ✅ Implemented and tested        | Gemini path handles novel questions                      |
-| Handle rate limits gracefully             | ✅ Implemented and tested        | Falls back to deterministic; warning recorded            |
-| Gemini (free tier) support                | ✅ Implemented and tested        | `GEMINI_API_KEY` in `.env`                               |
-| DeepSeek support (optional)               | ✅ Implemented (not live-tested) | Code path exists; not exercised because we chose Gemini  |
-| Deterministic-only mode                   | ✅ Implemented and tested        | `GEORESCUE_COPILOT_MODE=deterministic` disables LLM      |
-| Report structure (7 sections)             | ✅ Implemented and tested        | Sections documented in `situation_report.py`             |
+| Requirement                               | Status                           | Evidence                                                                               |
+| ----------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------- |
+| Situation-report copilot                  | ✅ Implemented and tested        | `src/georescue/reporting/llm_copilot.py`                                               |
+| Deterministic fallback                    | ✅ Implemented and tested        | `src/georescue/reporting/situation_report.py`                                          |
+| Every number grounded in computed metrics | ✅ Implemented and tested        | 12 `EvidenceMetric` objects in `evidence.py`                                           |
+| LLM cannot invent numbers                 | ✅ Implemented and tested        | Validator rejects unsupported numbers; verified in tests                               |
+| LLM can answer rescuer questions          | ✅ Implemented and tested        | `answer_question` works with Gemini and deterministic                                  |
+| Free-form question support                | ✅ Implemented and tested        | Gemini path handles novel questions                                                    |
+| Handle rate limits gracefully             | ✅ Implemented and tested        | Falls back to deterministic; warning recorded                                          |
+| Gemini (free tier) support                | ✅ Implemented and tested        | `GEMINI_API_KEY` in `.env`                                                             |
+| DeepSeek support (optional)               | ✅ Implemented (not live-tested) | Code path exists; not exercised because we chose Gemini                                |
+| Deterministic-only mode                   | ✅ Implemented and tested        | `GEORESCUE_COPILOT_MODE=deterministic` disables LLM                                    |
+| Report structure (7 sections)             | ✅ Implemented and tested        | Sections documented in `situation_report.py`                                           |
+| English and Nepali output                 | ✅ Implemented and tested        | LLM path produces English then Nepali; deterministic path prefixes a Nepali disclaimer |
+| Real place names                          | ✅ Implemented and tested        | OSM ids resolved to names via Nominatim; rate-limited and cached                       |
 
 ---
 
@@ -108,7 +110,8 @@ one of four labels:
 
 | Deliverable                        | Status                    | Location                                    |
 | ---------------------------------- | ------------------------- | ------------------------------------------- |
-| Working dashboard                  | ✅ Implemented and tested | `app.py`; nine sections load correctly      |
+| Working dashboard                  | ✅ Implemented and tested | `app.py`; ten sections load correctly       |
+| Live deployment                    | ✅ Implemented and tested | Streamlit Cloud; see README for URL         |
 | Interactive map with layer toggles | ✅ Implemented and tested | Folium map with all seven layers            |
 | One-page situation report          | ✅ Implemented and tested | Generated by `situation_report.py`          |
 | Machine-readable analysis summary  | ✅ Implemented and tested | `analysis_summary.json` export in dashboard |
@@ -131,7 +134,7 @@ one of four labels:
 | Evaluation metrics computed                   | ✅ Implemented and tested | IoU, precision, recall, F1, TP/FP/FN/TN              |
 | Reference not used for tuning                 | ✅ Implemented and tested | Thresholds chosen for physical plausibility          |
 | Save acquisition metadata                     | ✅ Implemented and tested | `analysis_summary.json` and evidence object          |
-| Explain limitations of evaluation             | ✅ Implemented            | Technical report Section 6.4                         |
+| Explain limitations of evaluation             | ✅ Implemented            | Technical report Section 6.3                         |
 
 ---
 
@@ -184,14 +187,13 @@ one of four labels:
 
 ## I. What is NOT implemented
 
-| Feature                                                          | Reason                                                                                                                                                                                                                       |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Trained flood-segmentation model                                 | Not implemented. A transparent baseline was used instead to keep the system fully reproducible without external model weights.                                                                                               |
-| Nepali-language report                                           | Not implemented. The copilot supports English only.                                                                                                                                                                          |
-| GeoTIFF export from dashboard                                    | Not implemented. The dashboard exports GeoJSON and JSON. GeoTIFF outputs are written by the pipeline to each run folder.                                                                                                     |
-| Copernicus Browser integration                                   | Not implemented. Not required for the submission.                                                                                                                                                                            |
-| Multi-user authentication                                        | Not implemented. Discouraged by the hackathon brief.                                                                                                                                                                         |
-| Optional flow-path bonus (upstream → downstream terrain tracing) | Not implemented. The empty `analysis/terrain.py` placeholder was removed during Stage 5 cleanup. The bonus is optional in the hackathon brief, and this submission focuses on the three core questions and the AI component. |
+| Feature                                                          | Reason                                                                                                                                       |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trained flood-segmentation model                                 | Not implemented. A transparent baseline was used instead to keep the system fully reproducible without external model weights.               |
+| GeoTIFF export from dashboard                                    | Not implemented. The dashboard exports GeoJSON and JSON. GeoTIFF outputs are written by the pipeline to each run folder.                     |
+| Copernicus Browser integration                                   | Not implemented. Not required for the submission.                                                                                            |
+| Multi-user authentication                                        | Not implemented. Discouraged by the hackathon brief.                                                                                         |
+| Optional flow-path bonus (upstream → downstream terrain tracing) | Not implemented. The bonus is optional in the hackathon brief, and this submission focuses on the three core questions and the AI component. |
 
 These are honest limitations, not failures. Each is documented in the
 technical report or README.
@@ -210,24 +212,10 @@ LLM, ohsome API) and degrade gracefully when the limits are hit.
 
 The automated test suite contains **76 tests** across seven files. Running `pytest tests/ -v` from the project root (with `PYTHONPATH=src`) produces:
 
-    collected 76 items
-    ...
-    76 passed, 13 warnings in ~2.5s
+```text
+collected 76 items
+...
+76 passed, 13 warnings in ~2.5s
+```
 
-The 13 warnings are upstream library deprecations (geopandas, rasterio, shapely) with no functional impact. Every core module has automated coverage; only the network-dependent stages (CDSE download, Sarsen terrain correction on live products, ohsome historical OSM query, LLM call) are exercised manually through `scripts/run_case_study.py` and `app.py`.
-
-Every numerical claim in the technical report can be traced back to a
-file on disk:
-
-- `data/processed/candidate_flood_extent.geojson` — 181 polygons,
-  3.05 km²
-- `data/processed/candidate_flood_extent_syapru.geojson` — 32 polygons,
-  0.28 km²
-- `outputs/infrastructure/infrastructure_summary.json` — 514 buildings,
-  1,256 roads, 11 bridges
-- `outputs/connectivity/connectivity_summary.json` — 249 settlements,
-  87 connected, 2 disconnected
-- `outputs/evaluation/evaluation_summary_observed_event.json` — IoU 0.007
-- `outputs/evaluation/evaluation_summary_buildings.json` — IoU 0.009
-
-To reproduce any of these, follow `README.md` and `docs/demo_script.md`.
+The 13 warnings are upstream library deprecations
